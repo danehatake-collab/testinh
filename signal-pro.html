@@ -1,0 +1,2735 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0c">
+    <title>SIGNAL PRO — Сигнал или Шум</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #050506;
+            --bg-secondary: #0a0a0c;
+            --bg-card: rgba(18, 18, 22, 0.8);
+            --bg-card-solid: #121216;
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            
+            --signal-start: #f97316;
+            --signal-mid: #fb923c;
+            --signal-end: #fbbf24;
+            --signal-glow: rgba(249, 115, 22, 0.5);
+            --signal-glow-strong: rgba(249, 115, 22, 0.7);
+            --signal-surface: rgba(249, 115, 22, 0.08);
+            
+            --noise-bg: rgba(26, 26, 30, 0.6);
+            --noise-border: rgba(255, 255, 255, 0.06);
+            --noise-text: #6b7280;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-muted: #52525b;
+            
+            --success: #22c55e;
+            --success-glow: rgba(34, 197, 94, 0.4);
+            --success-surface: rgba(34, 197, 94, 0.1);
+            
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-glow: rgba(249, 115, 22, 0.3);
+            
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-xl: 32px;
+            --radius-full: 9999px;
+            
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+            
+            --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        /* App Container */
+        .app {
+            max-width: 430px;
+            margin: 0 auto;
+            min-height: 100vh;
+            min-height: 100dvh;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+        
+        /* Premium Background Effects */
+        .bg-effects {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .bg-gradient-1 {
+            position: absolute;
+            top: -30%;
+            left: -20%;
+            width: 80%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(249, 115, 22, 0.15) 0%, transparent 60%);
+            filter: blur(60px);
+            animation: float1 20s ease-in-out infinite;
+        }
+        
+        .bg-gradient-2 {
+            position: absolute;
+            bottom: -20%;
+            right: -30%;
+            width: 70%;
+            height: 50%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 60%);
+            filter: blur(80px);
+            animation: float2 25s ease-in-out infinite;
+        }
+        
+        .bg-noise {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            mix-blend-mode: overlay;
+        }
+        
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(10%, 5%) scale(1.1); }
+            66% { transform: translate(-5%, 10%) scale(0.95); }
+        }
+        
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-10%, -5%) scale(1.05); }
+            66% { transform: translate(5%, -10%) scale(1.1); }
+        }
+        
+        /* Screen Container */
+        .screen {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: calc(var(--safe-top) + 16px) 20px calc(var(--safe-bottom) + 100px);
+            position: relative;
+            z-index: 1;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .screen.active {
+            display: flex;
+            animation: screenEnter 0.4s var(--transition-smooth) forwards;
+        }
+        
+        @keyframes screenEnter {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            animation: slideDown 0.5s var(--transition-bounce) 0.1s both;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 8px 32px var(--signal-glow),
+                        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo-icon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%);
+        }
+        
+        .logo-text {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Streak Badge */
+        .streak-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(251, 191, 36, 0.15));
+            padding: 8px 14px;
+            border-radius: var(--radius-full);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--signal-start);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            box-shadow: 0 4px 16px rgba(249, 115, 22, 0.2);
+            transition: all var(--transition-smooth);
+        }
+        
+        .streak-badge.active {
+            animation: streakPulse 2s ease-in-out infinite;
+        }
+        
+        .streak-badge .fire {
+            font-size: 16px;
+            animation: fireFlicker 0.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes streakPulse {
+            0%, 100% { 
+                box-shadow: 0 4px 16px rgba(249, 115, 22, 0.2);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 8px 32px rgba(249, 115, 22, 0.4);
+                transform: scale(1.02);
+            }
+        }
+        
+        @keyframes fireFlicker {
+            from { transform: scale(1) rotate(-5deg); }
+            to { transform: scale(1.15) rotate(5deg); }
+        }
+        
+        /* Date Display */
+        .date-display {
+            font-size: 15px;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 24px;
+            animation: fadeIn 0.5s ease 0.2s both;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Glass Card Base */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-subtle);
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-smooth);
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+        
+        /* Signal Card Premium */
+        .signal-card {
+            background: linear-gradient(165deg, 
+                rgba(249, 115, 22, 0.12) 0%, 
+                rgba(251, 191, 36, 0.08) 50%,
+                rgba(249, 115, 22, 0.05) 100%);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            box-shadow: 0 8px 40px rgba(249, 115, 22, 0.15),
+                        0 0 80px rgba(249, 115, 22, 0.05) inset;
+            animation: cardEnter 0.6s var(--transition-bounce) 0.3s both;
+        }
+        
+        .signal-card::before {
+            background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.4), transparent);
+        }
+        
+        .signal-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(249, 115, 22, 0.1) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+        
+        .signal-card:hover::after {
+            opacity: 1;
+        }
+        
+        .signal-card.completed {
+            background: linear-gradient(165deg, 
+                rgba(34, 197, 94, 0.15) 0%, 
+                rgba(34, 197, 94, 0.08) 100%);
+            border-color: rgba(34, 197, 94, 0.3);
+            box-shadow: 0 8px 40px rgba(34, 197, 94, 0.2);
+        }
+        
+        .signal-card.completed::before {
+            background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.5), transparent);
+        }
+        
+        @keyframes cardEnter {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        /* Noise Card */
+        .noise-card {
+            background: var(--noise-bg);
+            border: 1px solid var(--noise-border);
+            animation: cardEnter 0.6s var(--transition-bounce) 0.4s both;
+            transition: all var(--transition-smooth);
+        }
+        
+        .noise-card.locked {
+            opacity: 0.5;
+            filter: saturate(0.3);
+        }
+        
+        .noise-card.unlocked {
+            opacity: 1;
+            filter: saturate(1);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Card Header */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-icon {
+            font-size: 22px;
+            filter: drop-shadow(0 2px 8px rgba(249, 115, 22, 0.5));
+            animation: iconPulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .noise-card .card-icon {
+            filter: none;
+            animation: none;
+            opacity: 0.6;
+        }
+        
+        .card-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--signal-start);
+        }
+        
+        .noise-card .card-label {
+            color: var(--noise-text);
+        }
+        
+        .card-counter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        
+        .counter-badge {
+            background: rgba(249, 115, 22, 0.2);
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--signal-start);
+        }
+        
+        .signal-card.completed .counter-badge {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+        
+        /* Question Prompt */
+        .question-prompt {
+            text-align: center;
+            padding: 32px 20px;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        .question-prompt .highlight {
+            color: var(--signal-start);
+            font-weight: 700;
+        }
+        
+        /* Task List */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        /* Task Item */
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-smooth);
+            cursor: pointer;
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
+            animation: taskEnter 0.4s var(--transition-bounce) both;
+        }
+        
+        .task-item:nth-child(1) { animation-delay: 0.1s; }
+        .task-item:nth-child(2) { animation-delay: 0.15s; }
+        .task-item:nth-child(3) { animation-delay: 0.2s; }
+        
+        @keyframes taskEnter {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .task-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), 
+                rgba(249, 115, 22, 0.3) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+        
+        .task-item.ripple::before {
+            animation: rippleEffect 0.6s ease-out;
+        }
+        
+        @keyframes rippleEffect {
+            0% {
+                opacity: 1;
+                transform: scale(0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(2.5);
+            }
+        }
+        
+        .task-item:active {
+            transform: scale(0.98);
+        }
+        
+        .signal-card .task-item {
+            background: rgba(249, 115, 22, 0.08);
+            border: 1px solid rgba(249, 115, 22, 0.12);
+        }
+        
+        .signal-card .task-item:hover {
+            background: rgba(249, 115, 22, 0.12);
+            border-color: rgba(249, 115, 22, 0.2);
+        }
+        
+        .task-item.completed {
+            opacity: 0.6;
+        }
+        
+        .task-item.completing {
+            animation: taskComplete 0.5s var(--transition-bounce);
+        }
+        
+        @keyframes taskComplete {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.02); }
+            60% { transform: scale(0.98); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Checkbox */
+        .checkbox {
+            width: 26px;
+            height: 26px;
+            border-radius: 10px;
+            border: 2px solid rgba(249, 115, 22, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all var(--transition-smooth);
+            background: transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .signal-card .checkbox {
+            border-color: var(--signal-start);
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.2);
+        }
+        
+        .noise-card .checkbox {
+            border-color: var(--noise-text);
+            border-radius: 8px;
+        }
+        
+        .checkbox.checked {
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            border-color: transparent;
+            box-shadow: 0 4px 16px var(--signal-glow);
+            animation: checkBounce 0.4s var(--transition-bounce);
+        }
+        
+        .noise-card .checkbox.checked {
+            background: var(--noise-text);
+            box-shadow: none;
+        }
+        
+        @keyframes checkBounce {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .checkbox svg {
+            width: 14px;
+            height: 14px;
+            stroke: white;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            opacity: 0;
+            transform: scale(0) rotate(-45deg);
+            transition: all var(--transition-bounce);
+        }
+        
+        .checkbox.checked svg {
+            opacity: 1;
+            transform: scale(1) rotate(0);
+        }
+        
+        .task-text {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            line-height: 1.4;
+            transition: all var(--transition-smooth);
+        }
+        
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+        
+        .noise-card .task-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .task-delete {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all var(--transition-fast);
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .task-item:hover .task-delete {
+            opacity: 1;
+        }
+        
+        .task-delete:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            transform: scale(1.1);
+        }
+        
+        /* Add Task Button */
+        .add-task-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            border: 2px dashed rgba(249, 115, 22, 0.3);
+            background: transparent;
+            color: var(--signal-start);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            width: 100%;
+            font-family: inherit;
+            margin-top: 12px;
+        }
+        
+        .add-task-btn:hover {
+            border-color: var(--signal-start);
+            background: rgba(249, 115, 22, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        .add-task-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .add-task-btn .plus {
+            font-size: 20px;
+            font-weight: 300;
+        }
+        
+        .noise-card .add-task-btn {
+            border-color: var(--noise-border);
+            color: var(--noise-text);
+        }
+        
+        .noise-card .add-task-btn:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        /* Lock Overlay */
+        .lock-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(5, 5, 6, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 10;
+            transition: all var(--transition-smooth);
+        }
+        
+        .lock-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.05);
+        }
+        
+        .lock-icon {
+            font-size: 32px;
+            opacity: 0.6;
+            animation: lockShake 2s ease-in-out infinite;
+        }
+        
+        @keyframes lockShake {
+            0%, 100% { transform: rotate(0); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+        }
+        
+        .lock-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        /* Celebration Screen */
+        .celebration {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 5, 6, 0.98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .celebration.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .celebration-content {
+            text-align: center;
+            animation: celebrationEnter 0.8s var(--transition-bounce);
+        }
+        
+        @keyframes celebrationEnter {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .celebration-icon {
+            font-size: 100px;
+            margin-bottom: 24px;
+            animation: celebrationBounce 0.6s ease infinite;
+            filter: drop-shadow(0 0 40px rgba(249, 115, 22, 0.5));
+        }
+        
+        @keyframes celebrationBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-20px) scale(1.1); }
+        }
+        
+        .celebration-title {
+            font-size: 36px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+        
+        .celebration-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+        }
+        
+        .celebration-btn {
+            padding: 18px 56px;
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 12px 40px var(--signal-glow);
+            transition: all var(--transition-smooth);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .celebration-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 50px var(--signal-glow-strong);
+        }
+        
+        .celebration-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        /* Confetti Canvas */
+        #confetti-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2001;
+        }
+        
+        /* Input Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 5, 6, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-smooth);
+        }
+        
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .modal-content {
+            background: var(--bg-card-solid);
+            width: 100%;
+            max-width: 430px;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            padding: 28px 24px calc(var(--safe-bottom) + 24px);
+            transform: translateY(100%);
+            transition: transform 0.4s var(--transition-bounce);
+            border: 1px solid var(--border-subtle);
+            border-bottom: none;
+            box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .modal-handle {
+            width: 40px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .modal-title.signal {
+            color: var(--signal-start);
+        }
+        
+        .modal-close {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            transform: rotate(90deg);
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 18px 20px;
+            background: var(--bg-glass);
+            border: 2px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            margin-bottom: 20px;
+            transition: all var(--transition-smooth);
+        }
+        
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--signal-start);
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15),
+                        0 0 30px rgba(249, 115, 22, 0.1);
+        }
+        
+        .modal-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .modal-submit {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--transition-smooth);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .modal-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px var(--signal-glow);
+        }
+        
+        .modal-submit:active {
+            transform: translateY(0);
+        }
+        
+        .modal-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .noise-modal .modal-submit {
+            background: linear-gradient(135deg, #4b5563, #6b7280);
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 12, 0.9);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            padding: 12px 16px calc(var(--safe-bottom) + 12px);
+            display: flex;
+            justify-content: space-around;
+            max-width: 430px;
+            margin: 0 auto;
+            border-top: 1px solid var(--border-subtle);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 20px;
+            border-radius: var(--radius-md);
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            font-family: inherit;
+            position: relative;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%) scaleX(0);
+            width: 24px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--signal-start), var(--signal-end));
+            border-radius: 2px;
+            transition: transform var(--transition-smooth);
+        }
+        
+        .nav-item.active {
+            color: var(--signal-start);
+        }
+        
+        .nav-item.active::before {
+            transform: translateX(-50%) scaleX(1);
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            transition: all var(--transition-smooth);
+        }
+        
+        .nav-item.active .nav-icon {
+            transform: scale(1.15);
+            filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.5));
+        }
+        
+        /* Stats Screen */
+        .stats-header {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stats-hero {
+            background: linear-gradient(165deg, 
+                rgba(249, 115, 22, 0.15) 0%, 
+                rgba(251, 191, 36, 0.1) 100%);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            border-radius: var(--radius-xl);
+            padding: 40px 32px;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(249, 115, 22, 0.15);
+        }
+        
+        .stats-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.5), transparent);
+        }
+        
+        .stats-percentage {
+            font-size: 72px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 4px 20px rgba(249, 115, 22, 0.3));
+        }
+        
+        .stats-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+        
+        .stats-ring {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        
+        .stats-ring svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+        
+        .stats-ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 8;
+        }
+        
+        .stats-ring-progress {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 339.292;
+            stroke-dashoffset: 339.292;
+            transition: stroke-dashoffset 1s ease-out;
+        }
+        
+        .stats-ring-value {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--signal-start);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px 20px;
+            text-align: center;
+            transition: all var(--transition-smooth);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(249, 115, 22, 0.2);
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1;
+        }
+        
+        .stat-value.highlight {
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        
+        /* Weekly Chart */
+        .chart-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-bars {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 120px;
+            gap: 8px;
+        }
+        
+        .chart-bar-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .chart-bar {
+            width: 100%;
+            max-width: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            height: 100px;
+        }
+        
+        .chart-bar-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, var(--signal-start), var(--signal-end));
+            border-radius: 6px;
+            transition: height 0.8s var(--transition-bounce);
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+        }
+        
+        .chart-bar-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        
+        .chart-bar-container.today .chart-bar-label {
+            color: var(--signal-start);
+        }
+        
+        /* Heatmap */
+        .heatmap-container {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+        
+        .heatmap-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+        
+        .heatmap-labels {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .heatmap-day-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            transition: all var(--transition-smooth);
+        }
+        
+        .heatmap-cell.full {
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.4);
+        }
+        
+        .heatmap-cell.partial {
+            background: rgba(249, 115, 22, 0.4);
+        }
+        
+        .heatmap-cell.empty {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        
+        .heatmap-legend-item {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        
+        /* History Screen */
+        .history-header {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .history-month {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+        
+        .history-item {
+            display: flex;
+            gap: 16px;
+            padding: 20px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-subtle);
+            animation: historyEnter 0.4s var(--transition-bounce) both;
+        }
+        
+        .history-item:nth-child(1) { animation-delay: 0.1s; }
+        .history-item:nth-child(2) { animation-delay: 0.15s; }
+        .history-item:nth-child(3) { animation-delay: 0.2s; }
+        
+        @keyframes historyEnter {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .history-date {
+            flex-shrink: 0;
+            text-align: center;
+            min-width: 50px;
+        }
+        
+        .history-day {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+        
+        .history-weekday {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        
+        .history-content {
+            flex: 1;
+        }
+        
+        .history-dots {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        
+        .history-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+        }
+        
+        .history-dot.empty {
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+        }
+        
+        .history-tasks {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        
+        .history-signal {
+            color: var(--signal-start);
+            font-weight: 500;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.4;
+        }
+        
+        .empty-text {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        /* Settings */
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+        }
+        
+        .settings-item:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .settings-info {
+            flex: 1;
+        }
+        
+        .settings-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .settings-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        /* Toggle */
+        .toggle {
+            width: 56px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            position: relative;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+        }
+        
+        .toggle.active {
+            background: linear-gradient(135deg, var(--signal-start), var(--signal-end));
+            box-shadow: 0 4px 16px rgba(249, 115, 22, 0.4);
+        }
+        
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: all var(--transition-smooth);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .toggle.active::after {
+            left: 27px;
+        }
+        
+        /* Sound indicator */
+        .sound-indicator {
+            position: fixed;
+            top: calc(var(--safe-top) + 60px);
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--bg-card-solid);
+            padding: 12px 24px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all var(--transition-smooth);
+            border: 1px solid var(--border-subtle);
+            z-index: 1001;
+        }
+        
+        .sound-indicator.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+        
+        /* Utility */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Background Effects -->
+        <div class="bg-effects">
+            <div class="bg-gradient-1"></div>
+            <div class="bg-gradient-2"></div>
+            <div class="bg-noise"></div>
+        </div>
+        
+        <!-- Confetti Canvas -->
+        <canvas id="confetti-canvas"></canvas>
+        
+        <!-- Sound Indicator -->
+        <div class="sound-indicator" id="sound-indicator">
+            <span>🔊</span>
+            <span id="sound-text">Звук включен</span>
+        </div>
+        
+        <!-- Today Screen -->
+        <div class="screen active" id="today-screen">
+            <div class="header">
+                <div class="logo">
+                    <div class="logo-icon">📡</div>
+                    <span class="logo-text">SIGNAL</span>
+                </div>
+                <div class="streak-badge active" id="streak-badge">
+                    <span class="fire">🔥</span>
+                    <span><span id="streak-count">0</span> дней</span>
+                </div>
+            </div>
+            
+            <div class="date-display" id="current-date"></div>
+            
+            <!-- Signal Card -->
+            <div class="card signal-card" id="signal-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon" id="signal-icon">📡</span>
+                        <span class="card-label">Сигнал</span>
+                    </div>
+                    <div class="card-counter">
+                        <span class="counter-badge" id="signal-counter">0/3</span>
+                    </div>
+                </div>
+                
+                <div id="signal-empty" class="question-prompt">
+                    «Какие <span class="highlight">2-3 дела</span> сегодня<br>приблизят тебя к цели?»
+                </div>
+                
+                <div class="task-list" id="signal-tasks"></div>
+                
+                <button class="add-task-btn hidden" id="add-signal-btn">
+                    <span class="plus">+</span>
+                    <span>Добавить сигнал</span>
+                </button>
+            </div>
+            
+            <!-- Noise Card -->
+            <div class="card noise-card" id="noise-card">
+                <div class="lock-overlay" id="noise-lock">
+                    <span class="lock-icon">🔒</span>
+                    <span class="lock-text">Сначала выполни сигналы</span>
+                </div>
+                
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">📺</span>
+                        <span class="card-label">Шум</span>
+                    </div>
+                    <div class="card-counter">
+                        <span id="noise-counter">0</span>
+                    </div>
+                </div>
+                
+                <div id="noise-empty" class="question-prompt" style="padding: 20px; font-size: 13px; opacity: 0.6;">
+                    Мелкие дела, которые<br>можно сделать потом
+                </div>
+                
+                <div class="task-list" id="noise-tasks"></div>
+                
+                <button class="add-task-btn" id="add-noise-btn">
+                    <span class="plus">+</span>
+                    <span>Добавить шум</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- History Screen -->
+        <div class="screen" id="history-screen">
+            <h1 class="history-header">История</h1>
+            <div id="history-content"></div>
+        </div>
+        
+        <!-- Stats Screen -->
+        <div class="screen" id="stats-screen">
+            <h1 class="stats-header">Статистика</h1>
+            
+            <div class="stats-hero">
+                <div class="stats-ring">
+                    <svg viewBox="0 0 120 120">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#f97316"/>
+                                <stop offset="100%" style="stop-color:#fbbf24"/>
+                            </linearGradient>
+                        </defs>
+                        <circle class="stats-ring-bg" cx="60" cy="60" r="54"/>
+                        <circle class="stats-ring-progress" id="progress-ring" cx="60" cy="60" r="54"/>
+                    </svg>
+                    <div class="stats-ring-value" id="ring-value">0%</div>
+                </div>
+                <div class="stats-label">Сигналов выполнено</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value highlight" id="stats-streak">0</div>
+                    <div class="stat-desc">Дней подряд</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="perfect-days">0</div>
+                    <div class="stat-desc">100% дней</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-signals">0</div>
+                    <div class="stat-desc">Сигналов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-noise">0</div>
+                    <div class="stat-desc">Шумов</div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-title">Эта неделя</div>
+                <div class="chart-bars" id="weekly-chart"></div>
+            </div>
+            
+            <div class="heatmap-container">
+                <div class="heatmap-title">Активность за месяц</div>
+                <div class="heatmap-labels">
+                    <span class="heatmap-day-label">Пн</span>
+                    <span class="heatmap-day-label">Вт</span>
+                    <span class="heatmap-day-label">Ср</span>
+                    <span class="heatmap-day-label">Чт</span>
+                    <span class="heatmap-day-label">Пт</span>
+                    <span class="heatmap-day-label">Сб</span>
+                    <span class="heatmap-day-label">Вс</span>
+                </div>
+                <div class="heatmap-grid" id="heatmap"></div>
+                <div class="heatmap-legend">
+                    <span>Меньше</span>
+                    <div class="heatmap-legend-item" style="background: rgba(255,255,255,0.05);"></div>
+                    <div class="heatmap-legend-item" style="background: rgba(249, 115, 22, 0.4);"></div>
+                    <div class="heatmap-legend-item" style="background: linear-gradient(135deg, #f97316, #fbbf24);"></div>
+                    <span>Больше</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Screen -->
+        <div class="screen" id="settings-screen">
+            <h1 class="history-header">Настройки</h1>
+            
+            <div class="settings-item" id="sound-setting">
+                <div class="settings-info">
+                    <div class="settings-title">🔊 Звуки</div>
+                    <div class="settings-desc">Звуки при выполнении задач</div>
+                </div>
+                <div class="toggle active" id="sound-toggle"></div>
+            </div>
+            
+            <div class="settings-item" id="haptic-setting">
+                <div class="settings-info">
+                    <div class="settings-title">📳 Вибрация</div>
+                    <div class="settings-desc">Тактильная отдача</div>
+                </div>
+                <div class="toggle active" id="haptic-toggle"></div>
+            </div>
+            
+            <div class="settings-item" id="strict-setting">
+                <div class="settings-info">
+                    <div class="settings-title">🔒 Strict Mode</div>
+                    <div class="settings-desc">Блокировать шум до выполнения сигналов</div>
+                </div>
+                <div class="toggle active" id="strict-toggle"></div>
+            </div>
+            
+            <div class="settings-item" onclick="clearAllData()" style="margin-top: 32px;">
+                <div class="settings-info">
+                    <div class="settings-title" style="color: #ef4444;">🗑️ Очистить данные</div>
+                    <div class="settings-desc">Удалить все задачи и статистику</div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 40px; color: var(--text-muted); font-size: 12px;">
+                <p>SIGNAL PRO v2.0</p>
+                <p style="margin-top: 4px; opacity: 0.5;">Сделано с 🧡 для фокуса</p>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-screen="today">
+                <span class="nav-icon">📡</span>
+                <span>Сегодня</span>
+            </button>
+            <button class="nav-item" data-screen="history">
+                <span class="nav-icon">📅</span>
+                <span>История</span>
+            </button>
+            <button class="nav-item" data-screen="stats">
+                <span class="nav-icon">📊</span>
+                <span>Статистика</span>
+            </button>
+            <button class="nav-item" data-screen="settings">
+                <span class="nav-icon">⚙️</span>
+                <span>Настройки</span>
+            </button>
+        </nav>
+        
+        <!-- Add Task Modal -->
+        <div class="modal" id="task-modal">
+            <div class="modal-content">
+                <div class="modal-handle"></div>
+                <div class="modal-header">
+                    <h3 class="modal-title signal" id="modal-title">Добавить сигнал</h3>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+                <input type="text" class="modal-input" id="task-input" placeholder="Что нужно сделать?" maxlength="100">
+                <button class="modal-submit" id="modal-submit" onclick="submitTask()">Добавить</button>
+            </div>
+        </div>
+        
+        <!-- Celebration -->
+        <div class="celebration" id="celebration">
+            <div class="celebration-content">
+                <div class="celebration-icon">✨</div>
+                <h2 class="celebration-title">ТЫ HUSTLE<br>МАШИНА!</h2>
+                <p class="celebration-subtitle">Все сигналы выполнены</p>
+                <button class="celebration-btn" onclick="closeCelebration()">Продолжить</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================
+        // AUDIO ENGINE - Синтезированные звуки
+        // ============================================
+        class AudioEngine {
+            constructor() {
+                this.enabled = true;
+                this.context = null;
+                this.initialized = false;
+            }
+            
+            init() {
+                if (this.initialized) return;
+                try {
+                    this.context = new (window.AudioContext || window.webkitAudioContext)();
+                    this.initialized = true;
+                } catch (e) {
+                    console.log('Audio not supported');
+                }
+            }
+            
+            play(type) {
+                if (!this.enabled || !this.context) return;
+                
+                // Resume context if suspended (iOS requirement)
+                if (this.context.state === 'suspended') {
+                    this.context.resume();
+                }
+                
+                switch(type) {
+                    case 'tick':
+                        this.playTick();
+                        break;
+                    case 'complete':
+                        this.playComplete();
+                        break;
+                    case 'success':
+                        this.playSuccess();
+                        break;
+                    case 'add':
+                        this.playAdd();
+                        break;
+                    case 'delete':
+                        this.playDelete();
+                        break;
+                    case 'unlock':
+                        this.playUnlock();
+                        break;
+                }
+            }
+            
+            playTick() {
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                
+                osc.frequency.setValueAtTime(1200, this.context.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.context.currentTime + 0.1);
+                
+                gain.gain.setValueAtTime(0.15, this.context.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 0.1);
+                
+                osc.start(this.context.currentTime);
+                osc.stop(this.context.currentTime + 0.1);
+            }
+            
+            playComplete() {
+                // Приятный двухтональный звук завершения
+                const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+                
+                notes.forEach((freq, i) => {
+                    const osc = this.context.createOscillator();
+                    const gain = this.context.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(this.context.destination);
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.context.currentTime + i * 0.08);
+                    
+                    const startTime = this.context.currentTime + i * 0.08;
+                    gain.gain.setValueAtTime(0, startTime);
+                    gain.gain.linearRampToValueAtTime(0.12, startTime + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
+                    
+                    osc.start(startTime);
+                    osc.stop(startTime + 0.3);
+                });
+            }
+            
+            playSuccess() {
+                // Триумфальная мелодия для завершения всех сигналов
+                const melody = [
+                    { freq: 523.25, time: 0, duration: 0.15 },      // C5
+                    { freq: 659.25, time: 0.1, duration: 0.15 },    // E5
+                    { freq: 783.99, time: 0.2, duration: 0.15 },    // G5
+                    { freq: 1046.50, time: 0.35, duration: 0.4 },   // C6
+                ];
+                
+                melody.forEach(note => {
+                    const osc = this.context.createOscillator();
+                    const gain = this.context.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(this.context.destination);
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(note.freq, this.context.currentTime + note.time);
+                    
+                    const startTime = this.context.currentTime + note.time;
+                    gain.gain.setValueAtTime(0, startTime);
+                    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + note.duration);
+                    
+                    osc.start(startTime);
+                    osc.stop(startTime + note.duration);
+                });
+            }
+            
+            playAdd() {
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.context.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.context.currentTime + 0.1);
+                
+                gain.gain.setValueAtTime(0.1, this.context.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 0.15);
+                
+                osc.start(this.context.currentTime);
+                osc.stop(this.context.currentTime + 0.15);
+            }
+            
+            playDelete() {
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.context.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, this.context.currentTime + 0.15);
+                
+                gain.gain.setValueAtTime(0.08, this.context.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 0.15);
+                
+                osc.start(this.context.currentTime);
+                osc.stop(this.context.currentTime + 0.15);
+            }
+            
+            playUnlock() {
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, this.context.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.context.currentTime + 0.2);
+                
+                gain.gain.setValueAtTime(0.1, this.context.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 0.25);
+                
+                osc.start(this.context.currentTime);
+                osc.stop(this.context.currentTime + 0.25);
+            }
+        }
+        
+        const audio = new AudioEngine();
+        
+        // ============================================
+        // HAPTIC ENGINE - Вибрация
+        // ============================================
+        class HapticEngine {
+            constructor() {
+                this.enabled = true;
+                this.supported = 'vibrate' in navigator;
+            }
+            
+            trigger(type) {
+                if (!this.enabled || !this.supported) return;
+                
+                switch(type) {
+                    case 'light':
+                        navigator.vibrate(10);
+                        break;
+                    case 'medium':
+                        navigator.vibrate(25);
+                        break;
+                    case 'success':
+                        navigator.vibrate([20, 50, 30, 50, 40]);
+                        break;
+                    case 'error':
+                        navigator.vibrate([50, 30, 50]);
+                        break;
+                    case 'heavy':
+                        navigator.vibrate(50);
+                        break;
+                }
+            }
+        }
+        
+        const haptic = new HapticEngine();
+        
+        // ============================================
+        // CONFETTI ENGINE
+        // ============================================
+        class ConfettiEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.running = false;
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            launch() {
+                this.particles = [];
+                const colors = ['#f97316', '#fbbf24', '#fb923c', '#22c55e', '#ffffff'];
+                
+                for (let i = 0; i < 150; i++) {
+                    this.particles.push({
+                        x: this.canvas.width / 2 + (Math.random() - 0.5) * 200,
+                        y: this.canvas.height / 2,
+                        vx: (Math.random() - 0.5) * 20,
+                        vy: -Math.random() * 25 - 10,
+                        size: Math.random() * 8 + 4,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        rotation: Math.random() * 360,
+                        rotationSpeed: (Math.random() - 0.5) * 10,
+                        gravity: 0.5,
+                        friction: 0.99,
+                        opacity: 1
+                    });
+                }
+                
+                this.running = true;
+                this.animate();
+            }
+            
+            animate() {
+                if (!this.running) return;
+                
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                let activeParticles = 0;
+                
+                this.particles.forEach(p => {
+                    if (p.opacity <= 0) return;
+                    
+                    activeParticles++;
+                    
+                    p.vy += p.gravity;
+                    p.vx *= p.friction;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.rotation += p.rotationSpeed;
+                    
+                    if (p.y > this.canvas.height - 50) {
+                        p.opacity -= 0.02;
+                    }
+                    
+                    this.ctx.save();
+                    this.ctx.translate(p.x, p.y);
+                    this.ctx.rotate(p.rotation * Math.PI / 180);
+                    this.ctx.globalAlpha = p.opacity;
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+                    this.ctx.restore();
+                });
+                
+                if (activeParticles > 0) {
+                    requestAnimationFrame(() => this.animate());
+                } else {
+                    this.running = false;
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+            }
+        }
+        
+        const confetti = new ConfettiEngine(document.getElementById('confetti-canvas'));
+        
+        // ============================================
+        // APP STATE
+        // ============================================
+        let state = {
+            signals: [],
+            noise: [],
+            history: [],
+            streak: 0,
+            strictMode: true,
+            soundEnabled: true,
+            hapticEnabled: true,
+            lastCompletedDate: null
+        };
+        
+        let currentTaskType = 'signal';
+        let celebrationShown = false;
+        
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            updateDate();
+            render();
+            setupEventListeners();
+            
+            // Init audio on first interaction
+            document.addEventListener('touchstart', () => audio.init(), { once: true });
+            document.addEventListener('click', () => audio.init(), { once: true });
+        });
+        
+        // ============================================
+        // STORAGE
+        // ============================================
+        function saveState() {
+            try {
+                localStorage.setItem('signal_pro_state', JSON.stringify(state));
+            } catch (e) {
+                console.log('Storage error:', e);
+            }
+        }
+        
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('signal_pro_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                }
+                checkNewDay();
+                
+                // Update toggles
+                document.getElementById('sound-toggle').classList.toggle('active', state.soundEnabled);
+                document.getElementById('haptic-toggle').classList.toggle('active', state.hapticEnabled);
+                document.getElementById('strict-toggle').classList.toggle('active', state.strictMode);
+                audio.enabled = state.soundEnabled;
+                haptic.enabled = state.hapticEnabled;
+            } catch (e) {
+                console.log('Load error:', e);
+            }
+        }
+        
+        function checkNewDay() {
+            const today = getDateKey();
+            const todayHistory = state.history.find(h => h.date === today);
+            
+            if (!todayHistory && state.history.length > 0) {
+                // New day - check yesterday's completion
+                const yesterday = state.history[state.history.length - 1];
+                if (yesterday && yesterday.signals.length > 0) {
+                    const allDone = yesterday.signals.every(s => s.completed);
+                    if (allDone) {
+                        state.streak++;
+                    } else {
+                        state.streak = 0;
+                    }
+                }
+                
+                // Reset today's tasks
+                state.signals = [];
+                state.noise = [];
+                celebrationShown = false;
+                saveState();
+            }
+        }
+        
+        function getDateKey() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    haptic.trigger('light');
+                    const screen = btn.dataset.screen;
+                    showScreen(screen);
+                });
+            });
+            
+            // Add Signal via card click
+            document.getElementById('signal-card').addEventListener('click', (e) => {
+                if (e.target.closest('.task-item') || e.target.closest('.add-task-btn')) return;
+                if (state.signals.length < 3) {
+                    openModal('signal');
+                }
+            });
+            
+            document.getElementById('add-signal-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (state.signals.length < 3) {
+                    openModal('signal');
+                } else {
+                    haptic.trigger('error');
+                    showIndicator('⚠️', 'Максимум 3 сигнала');
+                }
+            });
+            
+            document.getElementById('add-noise-btn').addEventListener('click', () => {
+                openModal('noise');
+            });
+            
+            // Modal events
+            document.getElementById('task-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') submitTask();
+            });
+            
+            document.getElementById('task-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'task-modal') closeModal();
+            });
+            
+            // Settings toggles
+            document.getElementById('sound-toggle').addEventListener('click', () => {
+                state.soundEnabled = !state.soundEnabled;
+                audio.enabled = state.soundEnabled;
+                document.getElementById('sound-toggle').classList.toggle('active', state.soundEnabled);
+                haptic.trigger('light');
+                showIndicator(state.soundEnabled ? '🔊' : '🔇', state.soundEnabled ? 'Звук включен' : 'Звук выключен');
+                saveState();
+            });
+            
+            document.getElementById('haptic-toggle').addEventListener('click', () => {
+                state.hapticEnabled = !state.hapticEnabled;
+                haptic.enabled = state.hapticEnabled;
+                document.getElementById('haptic-toggle').classList.toggle('active', state.hapticEnabled);
+                if (state.hapticEnabled) haptic.trigger('medium');
+                saveState();
+            });
+            
+            document.getElementById('strict-toggle').addEventListener('click', () => {
+                state.strictMode = !state.strictMode;
+                document.getElementById('strict-toggle').classList.toggle('active', state.strictMode);
+                haptic.trigger('light');
+                render();
+                saveState();
+            });
+        }
+        
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        function showScreen(screen) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(`${screen}-screen`).classList.add('active');
+            document.querySelector(`[data-screen="${screen}"]`).classList.add('active');
+            
+            if (screen === 'history') renderHistory();
+            if (screen === 'stats') renderStats();
+        }
+        
+        // ============================================
+        // MODAL
+        // ============================================
+        function openModal(type) {
+            currentTaskType = type;
+            const modal = document.getElementById('task-modal');
+            const title = document.getElementById('modal-title');
+            const content = modal.querySelector('.modal-content');
+            
+            title.textContent = type === 'signal' ? '📡 Добавить сигнал' : '📺 Добавить шум';
+            title.className = `modal-title ${type}`;
+            content.classList.toggle('noise-modal', type === 'noise');
+            
+            modal.classList.add('active');
+            haptic.trigger('light');
+            
+            setTimeout(() => document.getElementById('task-input').focus(), 300);
+        }
+        
+        function closeModal() {
+            document.getElementById('task-modal').classList.remove('active');
+            document.getElementById('task-input').value = '';
+            haptic.trigger('light');
+        }
+        
+        function submitTask() {
+            const input = document.getElementById('task-input');
+            const text = input.value.trim();
+            
+            if (!text) return;
+            
+            if (currentTaskType === 'signal') {
+                if (state.signals.length >= 3) {
+                    haptic.trigger('error');
+                    showIndicator('⚠️', 'Максимум 3 сигнала!');
+                    return;
+                }
+                state.signals.push({ id: Date.now(), text, completed: false });
+            } else {
+                state.noise.push({ id: Date.now(), text, completed: false });
+            }
+            
+            audio.play('add');
+            haptic.trigger('medium');
+            
+            closeModal();
+            render();
+            saveState();
+        }
+        
+        // ============================================
+        // TASK ACTIONS
+        // ============================================
+        function toggleTask(type, id, event) {
+            // Ripple effect
+            const taskEl = event.currentTarget;
+            const rect = taskEl.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 100;
+            const y = ((event.clientY - rect.top) / rect.height) * 100;
+            taskEl.style.setProperty('--ripple-x', x + '%');
+            taskEl.style.setProperty('--ripple-y', y + '%');
+            taskEl.classList.add('ripple');
+            setTimeout(() => taskEl.classList.remove('ripple'), 600);
+            
+            const list = type === 'signal' ? state.signals : state.noise;
+            const task = list.find(t => t.id === id);
+            
+            if (task) {
+                task.completed = !task.completed;
+                
+                if (task.completed) {
+                    audio.play(type === 'signal' ? 'complete' : 'tick');
+                    haptic.trigger('success');
+                    taskEl.classList.add('completing');
+                    setTimeout(() => taskEl.classList.remove('completing'), 500);
+                } else {
+                    haptic.trigger('light');
+                }
+                
+                render();
+                saveState();
+                
+                // Check for all signals complete
+                if (type === 'signal' && !celebrationShown) {
+                    const allDone = state.signals.length > 0 && state.signals.every(s => s.completed);
+                    if (allDone) {
+                        setTimeout(() => showCelebration(), 300);
+                    }
+                }
+            }
+        }
+        
+        function deleteTask(type, id, event) {
+            event.stopPropagation();
+            
+            audio.play('delete');
+            haptic.trigger('medium');
+            
+            if (type === 'signal') {
+                state.signals = state.signals.filter(t => t.id !== id);
+            } else {
+                state.noise = state.noise.filter(t => t.id !== id);
+            }
+            
+            render();
+            saveState();
+        }
+        
+        // ============================================
+        // CELEBRATION
+        // ============================================
+        function showCelebration() {
+            celebrationShown = true;
+            
+            audio.play('success');
+            haptic.trigger('success');
+            confetti.launch();
+            
+            document.getElementById('celebration').classList.add('active');
+            archiveToday();
+        }
+        
+        function closeCelebration() {
+            document.getElementById('celebration').classList.remove('active');
+            haptic.trigger('light');
+            audio.play('unlock');
+            render();
+        }
+        
+        function archiveToday() {
+            const today = getDateKey();
+            const existing = state.history.findIndex(h => h.date === today);
+            
+            const dayData = {
+                date: today,
+                signals: [...state.signals],
+                noise: [...state.noise]
+            };
+            
+            if (existing >= 0) {
+                state.history[existing] = dayData;
+            } else {
+                state.history.push(dayData);
+            }
+            
+            saveState();
+        }
+        
+        // ============================================
+        // RENDER
+        // ============================================
+        function render() {
+            renderSignals();
+            renderNoise();
+            updateCounters();
+            updateStreak();
+        }
+        
+        function renderSignals() {
+            const container = document.getElementById('signal-tasks');
+            const empty = document.getElementById('signal-empty');
+            const addBtn = document.getElementById('add-signal-btn');
+            const card = document.getElementById('signal-card');
+            const icon = document.getElementById('signal-icon');
+            
+            if (state.signals.length === 0) {
+                empty.classList.remove('hidden');
+                addBtn.classList.add('hidden');
+                container.innerHTML = '';
+            } else {
+                empty.classList.add('hidden');
+                addBtn.classList.toggle('hidden', state.signals.length >= 3);
+                container.innerHTML = state.signals.map(task => renderTask('signal', task)).join('');
+                
+                // Attach event listeners
+                container.querySelectorAll('.task-item').forEach(el => {
+                    const id = parseInt(el.dataset.id);
+                    el.addEventListener('click', (e) => toggleTask('signal', id, e));
+                });
+            }
+            
+            // Update card state
+            const allDone = state.signals.length > 0 && state.signals.every(s => s.completed);
+            card.classList.toggle('completed', allDone);
+            icon.textContent = allDone ? '✨' : '📡';
+        }
+        
+        function renderNoise() {
+            const container = document.getElementById('noise-tasks');
+            const empty = document.getElementById('noise-empty');
+            const lock = document.getElementById('noise-lock');
+            const card = document.getElementById('noise-card');
+            
+            // Check if unlocked
+            const signalsDone = state.signals.length > 0 && state.signals.every(s => s.completed);
+            const isLocked = state.strictMode && !signalsDone && state.signals.length > 0;
+            
+            lock.classList.toggle('hidden', !isLocked);
+            card.classList.toggle('locked', isLocked);
+            card.classList.toggle('unlocked', !isLocked);
+            
+            if (state.noise.length === 0) {
+                empty.classList.remove('hidden');
+                container.innerHTML = '';
+            } else {
+                empty.classList.add('hidden');
+                container.innerHTML = state.noise.map(task => renderTask('noise', task)).join('');
+                
+                // Attach event listeners
+                container.querySelectorAll('.task-item').forEach(el => {
+                    const id = parseInt(el.dataset.id);
+                    el.addEventListener('click', (e) => {
+                        if (!isLocked) toggleTask('noise', id, e);
+                    });
+                });
+            }
+        }
+        
+        function renderTask(type, task) {
+            return `
+                <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+                    <div class="checkbox ${task.completed ? 'checked' : ''}">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="20,6 9,17 4,12"></polyline>
+                        </svg>
+                    </div>
+                    <span class="task-text">${escapeHtml(task.text)}</span>
+                    <button class="task-delete" onclick="deleteTask('${type}', ${task.id}, event)">×</button>
+                </div>
+            `;
+        }
+        
+        function updateCounters() {
+            const completed = state.signals.filter(s => s.completed).length;
+            const total = state.signals.length || 3;
+            
+            document.getElementById('signal-counter').textContent = `${completed}/${total}`;
+            document.getElementById('noise-counter').textContent = state.noise.length;
+        }
+        
+        function updateStreak() {
+            document.getElementById('streak-count').textContent = state.streak;
+            const badge = document.getElementById('streak-badge');
+            badge.classList.toggle('active', state.streak > 0);
+        }
+        
+        function updateDate() {
+            const now = new Date();
+            const options = { weekday: 'long', day: 'numeric', month: 'long' };
+            let formatted = now.toLocaleDateString('ru-RU', options);
+            formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+            document.getElementById('current-date').textContent = formatted;
+        }
+        
+        // ============================================
+        // HISTORY
+        // ============================================
+        function renderHistory() {
+            const container = document.getElementById('history-content');
+            
+            // Archive today if has data
+            if (state.signals.length > 0 || state.noise.length > 0) {
+                archiveToday();
+            }
+            
+            const sorted = [...state.history].reverse();
+            
+            if (sorted.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📅</div>
+                        <p class="empty-text">История пока пуста.<br>Добавь первые сигналы!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="history-month">Январь 2026</div>';
+            
+            sorted.forEach(day => {
+                const date = new Date(day.date);
+                const completed = day.signals.filter(s => s.completed).length;
+                const total = day.signals.length;
+                
+                const dots = Array(Math.max(total, 3)).fill(0).map((_, i) => {
+                    if (i < completed) return '<span class="history-dot"></span>';
+                    if (i < total) return '<span class="history-dot empty"></span>';
+                    return '';
+                }).join('');
+                
+                const signalTexts = day.signals.map(s => 
+                    `<span class="${s.completed ? 'history-signal' : ''}">• ${escapeHtml(s.text)}</span>`
+                ).join('<br>');
+                
+                const noiseCount = day.noise.filter(n => n.completed).length;
+                
+                html += `
+                    <div class="history-item">
+                        <div class="history-date">
+                            <div class="history-day">${date.getDate()}</div>
+                            <div class="history-weekday">${getWeekday(date)}</div>
+                        </div>
+                        <div class="history-content">
+                            <div class="history-dots">${dots}</div>
+                            <div class="history-tasks">
+                                ${signalTexts || '<span style="opacity: 0.5">Нет сигналов</span>'}
+                                ${noiseCount > 0 ? `<br><span style="color: var(--text-muted)">+ ${noiseCount} шумов</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // ============================================
+        // STATISTICS
+        // ============================================
+        function renderStats() {
+            const allSignals = state.history.flatMap(h => h.signals);
+            const completed = allSignals.filter(s => s.completed).length;
+            const total = allSignals.length;
+            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            // Animate progress ring
+            const ring = document.getElementById('progress-ring');
+            const circumference = 339.292;
+            const offset = circumference - (rate / 100) * circumference;
+            setTimeout(() => {
+                ring.style.strokeDashoffset = offset;
+            }, 100);
+            
+            document.getElementById('ring-value').textContent = `${rate}%`;
+            document.getElementById('stats-streak').textContent = state.streak;
+            
+            const perfectDays = state.history.filter(h => 
+                h.signals.length > 0 && h.signals.every(s => s.completed)
+            ).length;
+            document.getElementById('perfect-days').textContent = perfectDays;
+            
+            document.getElementById('total-signals').textContent = total;
+            
+            const totalNoise = state.history.reduce((sum, h) => sum + h.noise.filter(n => n.completed).length, 0);
+            document.getElementById('total-noise').textContent = totalNoise;
+            
+            renderWeeklyChart();
+            renderHeatmap();
+        }
+        
+        function renderWeeklyChart() {
+            const container = document.getElementById('weekly-chart');
+            const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            const today = new Date();
+            const todayDay = today.getDay() || 7; // Convert Sunday from 0 to 7
+            
+            let html = '';
+            
+            for (let i = 1; i <= 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - (todayDay - i));
+                const key = date.toISOString().split('T')[0];
+                const day = state.history.find(h => h.date === key);
+                
+                let height = 10;
+                if (day && day.signals.length > 0) {
+                    const completed = day.signals.filter(s => s.completed).length;
+                    height = (completed / day.signals.length) * 100;
+                }
+                
+                const isToday = i === todayDay;
+                
+                html += `
+                    <div class="chart-bar-container ${isToday ? 'today' : ''}">
+                        <div class="chart-bar">
+                            <div class="chart-bar-fill" style="height: ${height}%"></div>
+                        </div>
+                        <span class="chart-bar-label">${days[i - 1]}</span>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function renderHeatmap() {
+            const container = document.getElementById('heatmap');
+            let html = '';
+            
+            // Last 28 days (4 weeks)
+            for (let i = 27; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const key = date.toISOString().split('T')[0];
+                const day = state.history.find(h => h.date === key);
+                
+                let cls = 'empty';
+                if (day && day.signals.length > 0) {
+                    const completed = day.signals.filter(s => s.completed).length;
+                    const ratio = completed / day.signals.length;
+                    cls = ratio === 1 ? 'full' : ratio > 0 ? 'partial' : 'empty';
+                }
+                
+                html += `<div class="heatmap-cell ${cls}"></div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // ============================================
+        // UTILITIES
+        // ============================================
+        function showIndicator(icon, text) {
+            const indicator = document.getElementById('sound-indicator');
+            indicator.querySelector('span:first-child').textContent = icon;
+            document.getElementById('sound-text').textContent = text;
+            indicator.classList.add('show');
+            setTimeout(() => indicator.classList.remove('show'), 2000);
+        }
+        
+        function clearAllData() {
+            haptic.trigger('heavy');
+            if (confirm('Удалить все данные? Это действие нельзя отменить.')) {
+                state = {
+                    signals: [],
+                    noise: [],
+                    history: [],
+                    streak: 0,
+                    strictMode: true,
+                    soundEnabled: true,
+                    hapticEnabled: true,
+                    lastCompletedDate: null
+                };
+                celebrationShown = false;
+                localStorage.removeItem('signal_pro_state');
+                render();
+                showScreen('today');
+                showIndicator('🗑️', 'Данные удалены');
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function getWeekday(date) {
+            const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+            return days[date.getDay()];
+        }
+    </script>
+</body>
+</html>
